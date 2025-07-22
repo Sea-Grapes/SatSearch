@@ -29,14 +29,24 @@
 
   let sessions: Session[] = $state([])
 
-  let filtered_sessions: Session[] = $derived(
-    sessions
+  let filtered_sessions = $derived.by(() => {
+    return $state
+      .snapshot(sessions)
       .map((session) => {
         session.schools = session.schools.filter((school) => school.distance <= distance)
         return session
       })
-      .map((session) => session.schools.length >= 0)
-  )
+      .filter((session) => session.schools.length > 0)
+  })
+
+  // let filtered_sessions: Session[] = $derived(
+  //   sessions
+  //     .map((session) => {
+  //       session.schools = session.schools.filter((school) => school.distance <= distance)
+  //       return session
+  //     })
+  //     .filter((session) => session.schools.length >= 0)
+  // )
 
   const capitalize = (str: string) => str.toLowerCase().replaceAll(/\b./g, (s) => s.toUpperCase())
 
@@ -182,13 +192,13 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-300 border-t border-slate-300">
-          {#each sessions.filter((session) => session.schools.length > 0) as session}
+          {#each filtered_sessions as session}
             <tr>
               <td colspan="3" class="bg-slate-50 px-6 py-4 text-center font-medium text-slate-400"
                 >{session.displayDate}</td
               >
             </tr>
-            {#each session.schools.filter((school) => school.distance <= distance) as school}
+            {#each session.schools as school}
               <tr class="divide-x divide-slate-300 *:px-6 *:py-4">
                 <td>{school.name}</td>
                 <td

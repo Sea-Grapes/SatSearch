@@ -29,6 +29,15 @@
 
   let sessions: Session[] = $state([])
 
+  let filtered_sessions: Session[] = $derived(
+    sessions
+      .map((session) => {
+        session.schools = session.schools.filter((school) => school.distance <= distance)
+        return session
+      })
+      .map((session) => session.schools.length >= 0)
+  )
+
   const capitalize = (str: string) => str.toLowerCase().replaceAll(/\b./g, (s) => s.toUpperCase())
 
   async function load_data() {
@@ -48,12 +57,13 @@
       await Promise.all(
         sessions_data.map(
           async ({ eventFormattedDate: api_date, eventDisplayDate: displayDate }: SessionRes) => {
-            let schools = await (
-              await fetch(
-                `https://aru-test-center-search.collegeboard.org/prod/test-centers?date=${api_date}&zip=${zip}&country=US`
-              )
-            ).json()
-            schools = schools
+            let schools: School[] = (
+              await (
+                await fetch(
+                  `https://aru-test-center-search.collegeboard.org/prod/test-centers?date=${api_date}&zip=${zip}&country=US`
+                )
+              ).json()
+            )
               .filter((school: any) => school.seatAvailability)
               .map(
                 ({
@@ -66,7 +76,7 @@
                 }) => ({
                   name: capitalize(name),
                   address: `${capitalize(address1)} ${capitalize(city)} ${state.toUpperCase()} ${zip}`,
-                  distance: distance.toFixed(2)
+                  distance: Number(distance.toFixed(2))
                 })
               )
             res.push({
@@ -79,25 +89,11 @@
       )
 
       res.sort((a, b) => a.timestamp - b.timestamp)
-
       sessions.push(...res)
 
-      // const test: Session = {
-      //   timestamp: Date.now(),
-      //   displayDate: 'August 23',
-      //   schools: [
-      //     {
-      //       address: '123 123',
-      //       name: 'tapoiwefpaiwef',
-      //       distance: 10
-      //     }
-      //   ]
-      // }
-
-      // console.log(test)
-      // sessions.push(test)
-
       status = Status.Recieved
+
+      localStorage.setItem('sessions', JSON.stringify($state.snapshot(sessions)))
 
       // setTimeout(() => {
       //   status = Status.Recieved
@@ -108,7 +104,11 @@
   }
 
   onMount(() => {
-    let saved_dates = localStorage.getItem('data')
+    let saved_sessions = localStorage.getItem('sessions')
+    if (saved_sessions) {
+      let json = JSON.parse(saved_sessions)
+      sessions.push(...json)
+    }
   })
 </script>
 

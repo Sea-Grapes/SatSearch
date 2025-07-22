@@ -6,53 +6,106 @@
   import Warn from './icons/Warn.svelte'
   import { fly } from 'svelte/transition'
 
+  let form: HTMLFormElement
+
   let status: Status = $state(Status.None)
   status = Status.None
-
-  async function load_data() {
-    status = Status.Loading
-
-    setTimeout(() => {
-      status = Status.Recieved
-    }, 1000)
-
-    try {
-    } catch (e) {}
-  }
 
   let distance = $state(25)
   let zip = $state('')
   let zip_regex = '^\\d{5}(-\\d{4})?$'
 
-  interface DateData {
+  interface Session {
+    timestamp: number
     displayDate: string
-    schools: SchoolData[]
+    schools: School[]
   }
 
-  interface SchoolData {
+  interface School {
     name: string
     distance: number
     address: string
-    city: string
-    state: string
-    zip: string
   }
 
-  let dates: DateData[] = $state([
-    // {
-    //   displayDate: 'August 23',
-    //   schools: [
-    //     {
-    //       name: 'test',
-    //       distance: 10,
-    //       address: '123 anywhere',
-    //       city: 'Sammamish',
-    //       state: 'WA',
-    //       zip: '12345'
-    //     }
-    //   ]
-    // }
-  ])
+  let sessions: Session[] = $state([])
+
+  const capitalize = (str: string) => str.toLowerCase().replaceAll(/\b./g, (s) => s.toUpperCase())
+
+  async function load_data() {
+    try {
+      if (!form.checkValidity()) return
+      status = Status.Loading
+
+      let res: Session[] = []
+
+      let sessions_data = await (await fetch(`https://sat-admin-dates.collegeboard.org/`)).json()
+
+      interface SessionRes {
+        eventFormattedDate: string
+        eventDisplayDate: string
+      }
+
+      await Promise.all(
+        sessions_data.map(
+          async ({ eventFormattedDate: api_date, eventDisplayDate: displayDate }: SessionRes) => {
+            let schools = await (
+              await fetch(
+                `https://aru-test-center-search.collegeboard.org/prod/test-centers?date=${api_date}&zip=${zip}&country=US`
+              )
+            ).json()
+            schools = schools
+              .filter((school: any) => school.seatAvailability)
+              .map(
+                ({
+                  name = 'Unknown School',
+                  distance = 0,
+                  address1 = 'Address',
+                  city = 'City',
+                  state = 'State',
+                  zip = 'Zip'
+                }) => ({
+                  name: capitalize(name),
+                  address: `${capitalize(address1)} ${capitalize(city)} ${state.toUpperCase()} ${zip}`,
+                  distance: distance.toFixed(2)
+                })
+              )
+            res.push({
+              timestamp: new Date(api_date).getTime(),
+              displayDate: displayDate,
+              schools
+            })
+          }
+        )
+      )
+
+      res.sort((a, b) => a.timestamp - b.timestamp)
+
+      sessions.push(...res)
+
+      // const test: Session = {
+      //   timestamp: Date.now(),
+      //   displayDate: 'August 23',
+      //   schools: [
+      //     {
+      //       address: '123 123',
+      //       name: 'tapoiwefpaiwef',
+      //       distance: 10
+      //     }
+      //   ]
+      // }
+
+      // console.log(test)
+      // sessions.push(test)
+
+      status = Status.Recieved
+
+      // setTimeout(() => {
+      //   status = Status.Recieved
+      // }, 1000)
+    } catch (e) {
+      status = Status.Error
+    }
+  }
 
   onMount(() => {
     let saved_dates = localStorage.getItem('data')
@@ -66,7 +119,7 @@
         <h1 class="text-2xl font-semibold">SAT Testing Lookup</h1>
         <p class="text-sm text-slate-500">Search for SAT testing locations near you</p>
       </div>
-      <form class="space-y-5">
+      <form bind:this={form} class="space-y-5">
         <div>
           <label for="zipcode" class="mb-2 block font-medium text-slate-600">Zip code</label>
           <input
@@ -129,13 +182,13 @@
           </tr>
         </thead>
         <tbody class="divide-y divide-slate-300 border-t border-slate-300">
-          {#each dates as date}
+          {#each sessions.filter((session) => session.schools.length > 0) as session}
             <tr>
               <td colspan="3" class="bg-slate-50 px-6 py-4 text-center font-medium text-slate-400"
-                >{date.displayDate}</td
+                >{session.displayDate}</td
               >
             </tr>
-            {#each date.schools.filter((school) => school.distance <= distance) as school}
+            {#each session.schools.filter((school) => school.distance <= distance) as school}
               <tr class="divide-x divide-slate-300 *:px-6 *:py-4">
                 <td>{school.name}</td>
                 <td

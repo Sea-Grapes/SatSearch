@@ -7,12 +7,14 @@
   import { fly } from 'svelte/transition'
   import { PersistedState } from 'runed'
 
+  const log = (msg: string) => console.log(`[SAT] ${msg}`)
+
   let form: HTMLFormElement
 
   let status: Status = $state(Status.None)
   status = Status.None
 
-  let distance = new PersistedState('distance', 25)
+  let distance = new PersistedState('distance', '25')
   let zip = new PersistedState('zip', '')
   let zip_regex = '^\\d{5}(-\\d{4})?$'
 
@@ -31,11 +33,40 @@
   let sessions = new PersistedState<Session[]>('sessions', [])
   if (sessions.current.length) status = Status.Recieved
 
+  // stores data about last fetch
+  interface FetchData {
+    zip: string
+    time: number
+  }
+
+  let session_meta = new PersistedState<FetchData>('session_meta', {
+    zip: '',
+    time: 0
+  })
+
+  onMount(() => {
+    const current_time = new Date().getTime()
+    const last_time = session_meta.current.time
+    const elapsed = current_time - last_time
+    const elapsed_hrs = elapsed / (1000 * 60 * 60)
+
+    if (elapsed_hrs > 1) {
+      log(`It has been ${elapsed_hrs.toFixed(3)}h since last fetched, auto-reloading data`)
+
+      load_data()
+      session_meta.current.time = current_time
+    } else {
+      log(`It has been ${elapsed_hrs.toFixed(3)}h since last fetched, no need to auto-reload`)
+    }
+  })
+
   let filtered_sessions = $derived.by(() => {
     return $state
       .snapshot(sessions.current)
       .map((session) => {
-        session.schools = session.schools.filter((school) => school.distance <= distance.current)
+        session.schools = session.schools.filter(
+          (school) => school.distance <= Number(distance.current)
+        )
         return session
       })
       .filter((session) => session.schools.length > 0)
@@ -44,13 +75,17 @@
   const capitalize = (str: string) => str.toLowerCase().replaceAll(/\b./g, (s) => s.toUpperCase())
 
   async function load_data() {
+    log('loading data')
     try {
       if (!form.checkValidity()) return
+      session_meta.current.zip = zip.current
       status = Status.Loading
 
       let res: Session[] = []
 
-      let sessions_data = await (await fetch(`https://sat-admin-dates.collegeboard.org/`)).json()
+      let sessions_data = await (
+        await fetch(`https://sat-admin-dates.collegeboard.org/`, { cache: 'no-store' })
+      ).json()
 
       interface SessionRes {
         eventFormattedDate: string
@@ -100,6 +135,7 @@
       status = Status.Recieved
     } catch (e) {
       status = Status.Error
+      throw e
     }
   }
 </script>
@@ -131,7 +167,7 @@
           <input
             id="distance"
             placeholder="Enter distance"
-            bind:value={distance.current}
+            bind:value={() => distance.current, (v) => (distance.current = '' + (v || ''))}
             min="0"
             max="10000"
             type="number"
@@ -157,12 +193,12 @@
             <th colspan="3" class="bg-slate-100 px-6 py-4 text-left font-medium text-slate-400">
               {#if status == Status.Recieved}
                 <span in:fly={{ y: 10 }}>
-                  Results for {zip.current}
+                  Results for {session_meta.current.zip}
                 </span>
               {:else if status === Status.Loading}
                 <span in:fly={{ y: 10 }} class="flex items-center gap-3">
                   <Load />
-                  Fetching latest data for {zip.current}...
+                  Fetching latest data for {session_meta.current.zip}...
                 </span>
               {:else if status == Status.Error}
                 <span in:fly={{ y: 10 }} class="flex items-center gap-3">

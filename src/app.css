@@ -1,5 +1,11 @@
 @import 'tailwindcss';
 
 @theme {
-	--spacing-f: clamp(1rem, 5vw, 2rem);
+  --spacing-f: clamp(1rem, 5vw, 2rem);
+}
+
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px #ffffff inset !important;
 }

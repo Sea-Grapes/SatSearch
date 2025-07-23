@@ -140,99 +140,107 @@
   }
 </script>
 
-<main class="max-w-8xl mx-auto flex flex-col gap-8 p-f lg:flex-row">
-  <section class="shrink-0">
-    <header class="rounded-lg border border-slate-300 p-6 align-top">
-      <div class="mb-10 space-y-1">
-        <h1 class="text-2xl font-semibold">SAT Testing Lookup</h1>
-        <p class="text-sm text-slate-500">Search for SAT testing locations near you</p>
-      </div>
-      <form bind:this={form} class="space-y-5">
-        <div>
-          <label for="zipcode" class="mb-2 block font-medium text-slate-600">Zip code</label>
-          <input
-            id="zipcode"
-            placeholder="Enter a valid zip code"
-            bind:value={zip.current}
-            pattern={zip_regex}
-            required
-            class="h-9 w-full rounded-lg border border-slate-300 px-3 py-1 text-sm outline-none focus:border-slate-500 invalid:[&:not(:placeholder-shown):not(:focus)]:border-red-500"
-            type="text"
-          />
+<main class="max-w-8xl mx-auto flex min-h-screen flex-col gap-32 p-f pb-f2">
+  <div class="flex grow flex-col gap-8 lg:flex-row">
+    <section class="shrink-0">
+      <header class="rounded-lg border border-slate-300 p-6 align-top">
+        <div class="mb-10 space-y-1">
+          <h1 class="text-2xl font-semibold">SAT Testing Lookup</h1>
+          <p class="text-sm text-slate-500">Search for SAT testing locations near you</p>
         </div>
-        <div>
-          <label for="distance" class="mb-2 block font-medium text-slate-600"
-            >Max distance (miles)</label
-          >
-          <input
-            id="distance"
-            placeholder="Enter distance"
-            bind:value={() => distance.current, (v) => (distance.current = '' + (v || ''))}
-            min="0"
-            max="10000"
-            type="number"
-            class="h-9 w-full rounded-lg border border-slate-300 px-3 py-1 text-sm outline-none focus:border-slate-500 invalid:[&:not(:placeholder-shown):not(:focus)]:border-red-500"
-          />
-        </div>
-        <button
-          type="button"
-          onclick={load_data}
-          class="flex min-w-full cursor-pointer items-center justify-center gap-2 rounded-lg
+        <form bind:this={form} class="space-y-5">
+          <div>
+            <label for="zipcode" class="mb-2 block font-medium text-slate-600">Zip code</label>
+            <input
+              id="zipcode"
+              placeholder="Enter a valid zip code"
+              bind:value={zip.current}
+              pattern={zip_regex}
+              required
+              class="h-9 w-full rounded-lg border border-slate-300 px-3 py-1 text-sm outline-none focus:border-slate-500 invalid:[&:not(:placeholder-shown):not(:focus)]:border-red-500"
+              type="text"
+            />
+          </div>
+          <div>
+            <label for="distance" class="mb-2 block font-medium text-slate-600"
+              >Max distance (miles)</label
+            >
+            <input
+              id="distance"
+              placeholder="Enter distance"
+              bind:value={() => distance.current, (v) => (distance.current = '' + (v || ''))}
+              min="0"
+              max="10000"
+              type="number"
+              class="h-9 w-full rounded-lg border border-slate-300 px-3 py-1 text-sm outline-none focus:border-slate-500 invalid:[&:not(:placeholder-shown):not(:focus)]:border-red-500"
+            />
+          </div>
+          <button
+            type="button"
+            onclick={load_data}
+            class="flex min-w-full cursor-pointer items-center justify-center gap-2 rounded-lg
           border border-slate-300 bg-slate-100 p-2 text-center font-medium text-slate-400 transition outline-none hover:bg-slate-200 focus:ring-2 focus:ring-slate-300/60 active:translate-y-0.5"
-        >
-          Refresh data <Download />
-        </button>
-      </form>
-    </header>
-  </section>
-  <section class="grow">
-    <div class="overflow-hidden rounded-lg border border-slate-300">
-      <table class="min-w-full">
-        <thead>
-          <tr>
-            <th colspan="3" class="bg-slate-100 px-6 py-4 text-left font-medium text-slate-400">
-              {#if status == Status.Recieved}
-                <span in:fly={{ y: 10 }}>
-                  Results for {session_meta.current.zip}
-                </span>
-              {:else if status === Status.Loading}
-                <span in:fly={{ y: 10 }} class="flex items-center gap-3">
-                  <Load />
-                  Fetching latest data for {session_meta.current.zip}...
-                </span>
-              {:else if status == Status.Error}
-                <span in:fly={{ y: 10 }} class="flex items-center gap-3">
-                  <Warn /> An error occurred
-                </span>
-              {:else}
-                Results will appear here
-              {/if}
-            </th>
-          </tr>
-        </thead>
-        <tbody class="divide-y divide-slate-300 border-t border-slate-300">
-          {#each filtered_sessions as session}
+          >
+            Refresh data <Download />
+          </button>
+        </form>
+      </header>
+    </section>
+    <section class="grow">
+      <div class="overflow-hidden rounded-lg border border-slate-300">
+        <table class="min-w-full">
+          <thead>
             <tr>
-              <td colspan="3" class="bg-slate-50 px-6 py-4 text-center font-medium text-slate-400"
-                >{session.displayDate}</td
-              >
+              <th colspan="3" class="bg-slate-100 px-6 py-4 text-left font-medium text-slate-400">
+                {#if status == Status.Recieved}
+                  <span in:fly={{ y: 10 }}>
+                    Results for {session_meta.current.zip}
+                  </span>
+                {:else if status === Status.Loading}
+                  <span in:fly={{ y: 10 }} class="flex items-center gap-3">
+                    <Load />
+                    Fetching latest data for {session_meta.current.zip}...
+                  </span>
+                {:else if status == Status.Error}
+                  <span in:fly={{ y: 10 }} class="flex items-center gap-3">
+                    <Warn /> An error occurred
+                  </span>
+                {:else}
+                  Results will appear here
+                {/if}
+              </th>
             </tr>
-            {#each session.schools as school}
-              <tr class="divide-x divide-slate-300 *:px-6 *:py-4">
-                <td>{school.name}</td>
-                <td
-                  ><a
-                    class="text-blue-600 underline visited:text-purple-600 hover:text-blue-800"
-                    href="https://www.google.com/maps/search/?api=1&query={school.address}"
-                    target="_blank">{school.address}</a
-                  >
-                </td>
-                <td>{school.distance} mi</td>
+          </thead>
+          <tbody class="divide-y divide-slate-300 border-t border-slate-300">
+            {#each filtered_sessions as session}
+              <tr>
+                <td colspan="3" class="bg-slate-50 px-6 py-4 text-center font-medium text-slate-400"
+                  >{session.displayDate}</td
+                >
               </tr>
+              {#each session.schools as school}
+                <tr class="divide-x divide-slate-300 *:px-6 *:py-4">
+                  <td>{school.name}</td>
+                  <td
+                    ><a
+                      class="text-blue-600 underline visited:text-purple-600 hover:text-blue-800"
+                      href="https://www.google.com/maps/search/?api=1&query={school.address}"
+                      target="_blank">{school.address}</a
+                    >
+                  </td>
+                  <td>{school.distance} mi</td>
+                </tr>
+              {/each}
             {/each}
-          {/each}
-        </tbody>
-      </table>
-    </div>
-  </section>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+  <footer class="flex justify-between text-sm text-slate-400">
+    <div>Blurp Tech.</div>
+    <a class="underline" href="https://github.com/Sea-Grapes/sat-test-search" target="_blank"
+      >Source</a
+    >
+  </footer>
 </main>

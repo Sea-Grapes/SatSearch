@@ -2,6 +2,7 @@
 
 @theme {
   --spacing-f: clamp(1rem, 5vw, 2rem);
+  --spacing-f2: clamp(1rem, 5vw, 1.5rem);
 }
 
 input:-webkit-autofill,

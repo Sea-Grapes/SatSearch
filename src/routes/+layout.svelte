@@ -5,7 +5,7 @@
 </script>
 
 <svelte:head>
-  <title>SAT Test Search</title>
+  <title>SatSearch</title>
 </svelte:head>
 
 {@render children()}

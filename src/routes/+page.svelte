@@ -5,14 +5,15 @@
   import { Status } from './status'
   import Warn from './icons/Warn.svelte'
   import { fly } from 'svelte/transition'
+  import { PersistedState } from 'runed'
 
   let form: HTMLFormElement
 
   let status: Status = $state(Status.None)
   status = Status.None
 
-  let distance = $state(25)
-  let zip = $state('')
+  let distance = new PersistedState('distance', 25)
+  let zip = new PersistedState('zip', '')
   let zip_regex = '^\\d{5}(-\\d{4})?$'
 
   interface Session {
@@ -33,7 +34,7 @@
     return $state
       .snapshot(sessions)
       .map((session) => {
-        session.schools = session.schools.filter((school) => school.distance <= distance)
+        session.schools = session.schools.filter((school) => school.distance <= distance.current)
         return session
       })
       .filter((session) => session.schools.length > 0)
@@ -70,7 +71,7 @@
             let schools: School[] = (
               await (
                 await fetch(
-                  `https://aru-test-center-search.collegeboard.org/prod/test-centers?date=${api_date}&zip=${zip}&country=US`
+                  `https://aru-test-center-search.collegeboard.org/prod/test-centers?date=${api_date}&zip=${zip.current}&country=US`
                 )
               ).json()
             )
@@ -119,6 +120,12 @@
       let json = JSON.parse(saved_sessions)
       sessions.push(...json)
     }
+
+    // if (localStorage.getItem('distance')) distance = Number(localStorage.getItem('distance'))
+
+    // $effect(() => {
+    //   console.log(distance)
+    // })
   })
 </script>
 
@@ -135,7 +142,7 @@
           <input
             id="zipcode"
             placeholder="Enter a valid zip code"
-            bind:value={zip}
+            bind:value={zip.current}
             pattern={zip_regex}
             required
             class="h-9 w-full rounded-lg border border-slate-300 px-3 py-1 text-sm outline-none focus:border-slate-500 invalid:[&:not(:placeholder-shown):not(:focus)]:border-red-500"
@@ -149,7 +156,7 @@
           <input
             id="distance"
             placeholder="Enter distance"
-            bind:value={distance}
+            bind:value={distance.current}
             min="0"
             max="10000"
             type="number"
@@ -159,9 +166,10 @@
         <button
           type="button"
           onclick={load_data}
-          class="flex min-w-full cursor-pointer items-center justify-center gap-3 rounded-lg border border-slate-300 bg-slate-100 p-2 text-center font-medium text-slate-400 transition hover:bg-slate-200 active:translate-y-0.5"
+          class="flex min-w-full cursor-pointer items-center justify-center gap-2 rounded-lg
+          border border-slate-300 bg-slate-100 p-2 text-center font-medium text-slate-400 transition outline-none hover:bg-slate-200 focus:ring-2 focus:ring-slate-300/60 active:translate-y-0.5"
         >
-          Download data <Download />
+          Refresh data <Download />
         </button>
       </form>
     </header>
@@ -172,14 +180,14 @@
         <thead>
           <tr>
             <th colspan="3" class="bg-slate-100 px-6 py-4 text-left font-medium text-slate-400">
-              {#if status == Status.Recieved}
+              {#if status == Status.Recieved || sessions.length > 0}
                 <span in:fly={{ y: 10 }}>
-                  Results for {zip}
+                  Results for {zip.current}
                 </span>
               {:else if status === Status.Loading}
                 <span in:fly={{ y: 10 }} class="flex items-center gap-3">
                   <Load />
-                  Downloading data for {zip}...
+                  Fetching latest data for {zip.current}...
                 </span>
               {:else if status == Status.Error}
                 <span in:fly={{ y: 10 }} class="flex items-center gap-3">

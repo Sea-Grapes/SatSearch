@@ -28,26 +28,18 @@
     address: string
   }
 
-  let sessions: Session[] = $state([])
+  let sessions = new PersistedState<Session[]>('sessions', [])
+  if (sessions.current.length) status = Status.Recieved
 
   let filtered_sessions = $derived.by(() => {
     return $state
-      .snapshot(sessions)
+      .snapshot(sessions.current)
       .map((session) => {
         session.schools = session.schools.filter((school) => school.distance <= distance.current)
         return session
       })
       .filter((session) => session.schools.length > 0)
   })
-
-  // let filtered_sessions: Session[] = $derived(
-  //   sessions
-  //     .map((session) => {
-  //       session.schools = session.schools.filter((school) => school.distance <= distance)
-  //       return session
-  //     })
-  //     .filter((session) => session.schools.length >= 0)
-  // )
 
   const capitalize = (str: string) => str.toLowerCase().replaceAll(/\b./g, (s) => s.toUpperCase())
 
@@ -71,7 +63,10 @@
             let schools: School[] = (
               await (
                 await fetch(
-                  `https://aru-test-center-search.collegeboard.org/prod/test-centers?date=${api_date}&zip=${zip.current}&country=US`
+                  `https://aru-test-center-search.collegeboard.org/prod/test-centers?date=${api_date}&zip=${zip.current}&country=US`,
+                  {
+                    cache: 'no-store'
+                  }
                 )
               ).json()
             )
@@ -100,33 +95,13 @@
       )
 
       res.sort((a, b) => a.timestamp - b.timestamp)
-      sessions.push(...res)
+      sessions.current = res
 
       status = Status.Recieved
-
-      localStorage.setItem('sessions', JSON.stringify($state.snapshot(sessions)))
-
-      // setTimeout(() => {
-      //   status = Status.Recieved
-      // }, 1000)
     } catch (e) {
       status = Status.Error
     }
   }
-
-  onMount(() => {
-    let saved_sessions = localStorage.getItem('sessions')
-    if (saved_sessions) {
-      let json = JSON.parse(saved_sessions)
-      sessions.push(...json)
-    }
-
-    // if (localStorage.getItem('distance')) distance = Number(localStorage.getItem('distance'))
-
-    // $effect(() => {
-    //   console.log(distance)
-    // })
-  })
 </script>
 
 <main class="max-w-8xl mx-auto flex flex-col gap-8 p-f lg:flex-row">
@@ -180,7 +155,7 @@
         <thead>
           <tr>
             <th colspan="3" class="bg-slate-100 px-6 py-4 text-left font-medium text-slate-400">
-              {#if status == Status.Recieved || sessions.length > 0}
+              {#if status == Status.Recieved}
                 <span in:fly={{ y: 10 }}>
                   Results for {zip.current}
                 </span>

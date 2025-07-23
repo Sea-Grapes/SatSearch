@@ -1,3 +1,3 @@
 # Sat Test Search
 
-A simple app to search for sat test centers in bulk. Yeah a whole metaframework is overkill for this but I want my *reactivity soup*
+A simple web app to search for sat test centers in bulk. Uses the CollegeBoard API to find locations, currently only works for the US.
